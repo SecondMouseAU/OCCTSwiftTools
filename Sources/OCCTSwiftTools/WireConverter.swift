@@ -10,17 +10,32 @@ import OCCTSwiftViewport
 /// Converts OCCTSwift Wire objects to edge-only ViewportBody values.
 public enum WireConverter {
 
+    /// Default per-edge point cap for ordered-edge wire extraction.
+    public static let defaultMaxPointsPerEdge: Int = 10000
+
+    /// Default linear deflection for the Shape-fallback edge extraction.
+    public static let defaultEdgeDeflection: Double = 0.005
+
     /// Converts a Wire to an edge-only ViewportBody by extracting ordered edge polylines.
+    ///
+    /// - Parameter maxPointsPerEdge: Hard cap on points per edge polyline. Lower it to
+    ///   coarsen dense curved edges (e.g. helical threads) that otherwise render as an
+    ///   illegible, slow grey haze. Defaults to `defaultMaxPointsPerEdge` (10000).
+    /// - Parameter edgeDeflection: Linear deflection used only by the Shape-based fallback
+    ///   path (when ordered-edge extraction yields nothing). Defaults to
+    ///   `defaultEdgeDeflection` (0.005); coarsen for dense geometry. See issue #24.
     public static func wireToBody(
         _ wire: Wire,
         id: String,
-        color: SIMD4<Float>
+        color: SIMD4<Float>,
+        maxPointsPerEdge: Int = defaultMaxPointsPerEdge,
+        edgeDeflection: Double = defaultEdgeDeflection
     ) -> ViewportBody {
         let edgeCount = wire.orderedEdgeCount
         var polylines: [[SIMD3<Float>]] = []
 
         for i in 0..<edgeCount {
-            if let pts = wire.orderedEdgePoints(at: i, maxPoints: 10000) {
+            if let pts = wire.orderedEdgePoints(at: i, maxPoints: maxPointsPerEdge) {
                 let floatPts = pts.map { SIMD3<Float>(Float($0.x), Float($0.y), Float($0.z)) }
                 if floatPts.count >= 2 {
                     polylines.append(floatPts)
@@ -32,7 +47,9 @@ public enum WireConverter {
         if polylines.isEmpty, let shape = Shape.fromWire(wire) {
             let count = shape.edgeCount
             for i in 0..<count {
-                if let pts = shape.edgePolyline(at: i, deflection: 0.005) {
+                if let pts = shape.edgePolyline(
+                    at: i, deflection: edgeDeflection, maxPoints: maxPointsPerEdge
+                ) {
                     let floatPts = pts.map { SIMD3<Float>(Float($0.x), Float($0.y), Float($0.z)) }
                     if floatPts.count >= 2 {
                         polylines.append(floatPts)

@@ -2,6 +2,30 @@
 
 Most recent first. Pre-1.0 was free to break; SemVer-stable from v1.0.0 per the [cohort SemVer policy](https://github.com/gsdali/OCCTSwift/blob/main/docs/SEMVER.md).
 
+## v1.2.0 — 2026-06-21
+
+Wireframe edge polyline extraction is now **tunable**, closing [#24](https://github.com/gsdali/OCCTSwiftTools/issues/24).
+
+`CADFileLoader.shapeToBodyAndMetadata` previously extracted edge polylines at a hardcoded `0.005` linear deflection (independent of the triangle-mesh `deflection`), so a B-rep edge following a long fine curve — e.g. a helical thread — became thousands of points: a slow-to-render, illegibly dense wireframe with no knob to coarsen it.
+
+New parameters (defaults preserve historical behaviour exactly):
+
+- `shapeToBodyAndMetadata(..., edgeDeflection: Double = 0.005, maxPointsPerEdge: Int = 1000, ...)` — coarsen edge sampling for dense curved geometry, and/or hard-cap points per edge.
+- `WireConverter.wireToBody(..., maxPointsPerEdge: Int = 10000, edgeDeflection: Double = 0.005)` — same knobs on the wire path (ordered-edge cap + Shape-fallback deflection).
+- Public defaults exposed as `CADFileLoader.defaultEdgeDeflection` / `.defaultMaxPointsPerEdge` and `WireConverter.defaultEdgeDeflection` / `.defaultMaxPointsPerEdge`.
+
+Consumers (e.g. OCCTSwiftPartsAgent) can now coarsen edges at the source and drop the post-hoc `ViewportBody.edges` decimation hack — which also restores edge-picking (the workaround had to clear `edgeIndices`).
+
+Bumped to **MINOR** per the cohort SemVer policy: new opt-in functionality, no behaviour change for existing callers.
+
+## v1.1.2 — 2026-06-19
+
+Pure dep re-pin: OCCT 8.0.0p1 cohort (`OCCTSwift` ≥ 1.7.1). No public API changes.
+
+## v1.1.1 — 2026-05-26
+
+Pure dep bump: raise `OCCTSwiftViewport` floor 1.0.2 → 1.0.4 ([#22](https://github.com/gsdali/OCCTSwiftTools/issues/22)). No public API changes.
+
 ## v1.1.0 — 2026-05-09
 
 `PointConverter.pointsToBody` now wires its `pointRadius` and `perPointColors` parameters through to the new `ViewportBody.pointRadius` / `vertexColors` fields, and stamps `primitiveKind = .point` so OCCTSwiftViewport's point-cloud rendering pipeline (added in [Viewport v1.0.2](https://github.com/gsdali/OCCTSwiftViewport/releases/tag/v1.0.2), issue [#28](https://github.com/gsdali/OCCTSwiftViewport/issues/28)) draws the body as visible point sprites.
