@@ -200,6 +200,14 @@ public enum CADFileLoader {
     /// - Parameter stl: If true, uses coarser deflection suitable for pre-tessellated STL data
     /// - Parameter deflection: Custom linear deflection override. Lower = smoother (default 0.1, STL uses 1.0).
     /// - Parameter gpuTessellation: If true, uses coarser CPU mesh (GPU PN triangles will refine).
+    /// - Parameter edgeDeflection: Linear deflection for the **wireframe edge polylines**
+    ///   (independent of the triangle `deflection`). Lower = denser/smoother edges.
+    ///   Defaults to `defaultEdgeDeflection` (0.005). Coarsen this for geometry whose
+    ///   edges follow long fine curves — e.g. helical threads, where the default
+    ///   produces an illegibly dense, slow-to-render wireframe (issue #24).
+    /// - Parameter maxPointsPerEdge: Hard cap on points per edge polyline.
+    ///   Defaults to `defaultMaxPointsPerEdge` (1000). A lower cap bounds the line
+    ///   count for pathologically long edges regardless of `edgeDeflection`.
     /// - Parameter includeMeasurements: If true, populates `metadata.measurements`
     ///   with per-face areas and per-edge lengths (via `Shape.measure`). Off by
     ///   default — face-area iteration is O(faces) and not free for large assemblies.
@@ -210,6 +218,8 @@ public enum CADFileLoader {
         stl: Bool = false,
         deflection customDeflection: Double? = nil,
         gpuTessellation: Bool = false,
+        edgeDeflection: Double = defaultEdgeDeflection,
+        maxPointsPerEdge: Int = defaultMaxPointsPerEdge,
         includeMeasurements: Bool = false
     ) -> (ViewportBody?, CADBodyMetadata?) {
         let measurements: ShapeMeasurements? = includeMeasurements ? shape.measure() : nil
@@ -226,7 +236,9 @@ public enum CADFileLoader {
             mesh = shape.mesh(parameters: highQualityMeshParams)
         }
         guard let mesh else {
-            let edgePolylines = extractEdgePolylines(from: shape)
+            let edgePolylines = extractEdgePolylines(
+                from: shape, deflection: edgeDeflection, maxPointsPerEdge: maxPointsPerEdge
+            )
             if !edgePolylines.isEmpty {
                 let edges = edgePolylines.map { $0.points }
                 let pickVerts = sourceShapeVertexPickData(from: shape)
@@ -272,7 +284,9 @@ public enum CADFileLoader {
         // Apply crease-aware normal smoothing for smooth curved surfaces
         NormalSmoothing.smoothNormals(vertexData: &vertexData, indices: indices)
 
-        let edgePolylines = extractEdgePolylines(from: shape)
+        let edgePolylines = extractEdgePolylines(
+            from: shape, deflection: edgeDeflection, maxPointsPerEdge: maxPointsPerEdge
+        )
         let edges = edgePolylines.map { $0.points }
         let pickVerts = sourceShapeVertexPickData(from: shape)
         let edgeIndices = flattenEdgeIndices(edgePolylines)
@@ -312,15 +326,27 @@ public enum CADFileLoader {
         return result
     }
 
+    /// Default linear deflection for wireframe edge polyline extraction.
+    /// Fine enough for typical CAD edges; coarsen via `edgeDeflection` for
+    /// dense curved geometry (e.g. helical threads) — see issue #24.
+    public static let defaultEdgeDeflection: Double = 0.005
+
+    /// Default per-edge point cap for wireframe polyline extraction.
+    public static let defaultMaxPointsPerEdge: Int = 1000
+
     private static func extractEdgePolylines(
-        from shape: Shape
+        from shape: Shape,
+        deflection: Double = defaultEdgeDeflection,
+        maxPointsPerEdge: Int = defaultMaxPointsPerEdge
     ) -> [(edgeIndex: Int, points: [SIMD3<Float>])] {
         let count = shape.edgeCount
         var result: [(edgeIndex: Int, points: [SIMD3<Float>])] = []
         result.reserveCapacity(count)
 
         for i in 0..<count {
-            guard let polyline = shape.edgePolyline(at: i, deflection: 0.005) else { continue }
+            guard let polyline = shape.edgePolyline(
+                at: i, deflection: deflection, maxPoints: maxPointsPerEdge
+            ) else { continue }
             let floatPoints = polyline.map { SIMD3<Float>(Float($0.x), Float($0.y), Float($0.z)) }
             guard floatPoints.count >= 2 else { continue }
             result.append((edgeIndex: i, points: floatPoints))

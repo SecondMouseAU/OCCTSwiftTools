@@ -6,7 +6,7 @@ The bridge layer between [OCCTSwift](https://github.com/gsdali/OCCTSwift) (B-Rep
 
 Part of the [OCCTSwift ecosystem](https://github.com/gsdali/OCCTSwift/blob/main/docs/ecosystem.md) — see the ecosystem map for how this package fits with the kernel, viewport, and sibling layers.
 
-> Status: **v1.1.0**. SemVer-stable from v1.0.0; versioning follows the [cohort SemVer policy](https://github.com/gsdali/OCCTSwift/blob/main/docs/SEMVER.md). See [docs/CHANGELOG.md](docs/CHANGELOG.md) and [SPEC.md](SPEC.md).
+> Status: **v1.2.0**. SemVer-stable from v1.0.0; versioning follows the [cohort SemVer policy](https://github.com/gsdali/OCCTSwift/blob/main/docs/SEMVER.md). See [docs/CHANGELOG.md](docs/CHANGELOG.md) and [SPEC.md](SPEC.md).
 
 ## What it does
 

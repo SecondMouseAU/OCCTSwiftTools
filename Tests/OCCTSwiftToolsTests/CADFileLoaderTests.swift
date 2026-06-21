@@ -144,4 +144,72 @@ struct CADFileLoaderTests {
         #expect(meta.vertices == body.vertices,
                 "metadata.vertices and body.vertices must agree post-v0.5.0")
     }
+
+    // MARK: - #24: tunable wireframe edge deflection / point cap
+
+    private static func totalEdgePoints(_ body: ViewportBody) -> Int {
+        body.edges.reduce(0) { $0 + $1.count }
+    }
+
+    @Test func t_coarserEdgeDeflectionYieldsFewerPoints() {
+        // A cylinder's circular edges discretize with a point count that scales
+        // with edge deflection. Coarsening edgeDeflection must reduce the total
+        // wireframe point count without dropping any edge (issue #24).
+        guard let cyl = Shape.cylinder(radius: 5, height: 10) else {
+            Issue.record("Shape.cylinder returned nil")
+            return
+        }
+        let (fine, _) = CADFileLoader.shapeToBodyAndMetadata(
+            cyl, id: "fine", color: SIMD4<Float>(1, 1, 1, 1), edgeDeflection: 0.005)
+        let (coarse, _) = CADFileLoader.shapeToBodyAndMetadata(
+            cyl, id: "coarse", color: SIMD4<Float>(1, 1, 1, 1), edgeDeflection: 0.5)
+        guard let fine, let coarse else {
+            Issue.record("cylinder conversion produced no body")
+            return
+        }
+        #expect(fine.edges.count == coarse.edges.count,
+                "edge count is unchanged — only the per-edge sampling density differs")
+        #expect(Self.totalEdgePoints(coarse) < Self.totalEdgePoints(fine),
+                "coarser edgeDeflection must shed points: coarse \(Self.totalEdgePoints(coarse)) vs fine \(Self.totalEdgePoints(fine))")
+    }
+
+    @Test func t_maxPointsPerEdgeCapsPolylineLength() {
+        // The hard cap bounds points-per-edge regardless of deflection.
+        guard let cyl = Shape.cylinder(radius: 50, height: 10) else {
+            Issue.record("Shape.cylinder returned nil")
+            return
+        }
+        let cap = 16
+        let (body, _) = CADFileLoader.shapeToBodyAndMetadata(
+            cyl, id: "capped", color: SIMD4<Float>(1, 1, 1, 1),
+            edgeDeflection: 0.0001, maxPointsPerEdge: cap)
+        guard let body else {
+            Issue.record("cylinder conversion produced no body")
+            return
+        }
+        for poly in body.edges {
+            #expect(poly.count <= cap,
+                    "polyline of \(poly.count) points exceeds maxPointsPerEdge \(cap)")
+        }
+    }
+
+    @Test func t_defaultEdgeDeflectionUnchanged() {
+        // Defaults preserve historical behaviour: omitting edgeDeflection must
+        // match passing the documented default explicitly.
+        guard let cyl = Shape.cylinder(radius: 5, height: 10) else {
+            Issue.record("Shape.cylinder returned nil")
+            return
+        }
+        let (implicit, _) = CADFileLoader.shapeToBodyAndMetadata(
+            cyl, id: "implicit", color: SIMD4<Float>(1, 1, 1, 1))
+        let (explicit, _) = CADFileLoader.shapeToBodyAndMetadata(
+            cyl, id: "explicit", color: SIMD4<Float>(1, 1, 1, 1),
+            edgeDeflection: CADFileLoader.defaultEdgeDeflection,
+            maxPointsPerEdge: CADFileLoader.defaultMaxPointsPerEdge)
+        guard let implicit, let explicit else {
+            Issue.record("cylinder conversion produced no body")
+            return
+        }
+        #expect(Self.totalEdgePoints(implicit) == Self.totalEdgePoints(explicit))
+    }
 }
