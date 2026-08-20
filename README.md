@@ -1,5 +1,31 @@
 # OCCTSwiftTools
 
+> ## Superseded by OCCTSwiftInteraction
+>
+> **New code should depend on [OCCTSwiftInteraction](https://github.com/SecondMouseAU/OCCTSwiftInteraction)**,
+> which vends `OCCTSwiftTools` as one of its three targets, alongside the other two packages this one
+> used to sit beside. The module name is unchanged, so `import OCCTSwiftTools` still works: what
+> changes is the package you depend on.
+>
+> ```diff
+> -.package(url: "https://github.com/SecondMouseAU/OCCTSwiftTools.git", from: "..."),
+> +.package(url: "https://github.com/SecondMouseAU/OCCTSwiftInteraction.git", from: "..."),
+>
+> -.product(name: "OCCTSwiftTools", package: "OCCTSwiftTools"),
+> +.product(name: "OCCTSwiftTools", package: "OCCTSwiftInteraction"),
+> ```
+>
+> **You cannot depend on both.** They vend targets with the same names, and SwiftPM rejects
+> that at build-graph assembly rather than at resolution, so `swift package resolve` succeeds
+> and `swift build` then fails on a duplicate target name. Migrate the whole graph at once, and
+> see [`docs/MIGRATION.md`](https://github.com/SecondMouseAU/OCCTSwiftInteraction/blob/main/docs/MIGRATION.md).
+>
+> This repository is **not being deleted**, and is `status: maintenance`: it still builds and
+> still takes dependency repins, so nothing breaks by staying. It takes no new features or
+> fixes, which all go to OCCTSwiftInteraction. Why the three were merged, and what it bought,
+> is in [ecosystem#42](https://github.com/SecondMouseAU/ecosystem/issues/42).
+
+
 [![Swift](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FSecondMouseAU%2FOCCTSwiftTools%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/SecondMouseAU/OCCTSwiftTools)
 [![Platforms](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FSecondMouseAU%2FOCCTSwiftTools%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/SecondMouseAU/OCCTSwiftTools)
 [![License](https://img.shields.io/badge/license-LGPL--2.1-blue)](LICENSE)
