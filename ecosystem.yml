@@ -2,7 +2,7 @@ okf_version: 1
 repo: OCCTSwiftTools
 cluster: kernel
 visibility: public
-status: active
+status: maintenance
 language: Swift
 summary: Bridge layer between the OCCTSwift kernel and the OCCTSwiftViewport renderer — converts Shapes/curves/surfaces into ViewportBody and loads CAD files.
 products: []
